@@ -3,8 +3,8 @@ import type { Server } from "http";
 import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { fetchChannelVideos, parseDuration } from "./lib/youtube";
-import { calculateCRPS, classifyFormat, extractKeywords } from "./lib/analysis";
-import { generateIdeas, generateGuidance } from "./lib/openai";
+import { calculateCRPS, classifyFormat, extractKeywords, diagnoseAndPlan, generateStaticGuidance } from "./lib/analysis";
+import { generateGuidance } from "./lib/openai";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -158,22 +158,49 @@ export async function registerRoutes(
       const { channelId } = req.params;
       const keywords = await storage.getTopKeywords(channelId);
       const videos = await storage.getVideos(channelId);
+      const metrics = await storage.getVideoMetrics(channelId);
+      const channelAnalytics = await storage.getChannelAnalytics(channelId);
       
-      if (keywords.length === 0) {
+      if (keywords.length === 0 || !channelAnalytics) {
           return res.status(404).json({ message: "No data found. Run analysis first." });
       }
 
-      // Generate ideas via OpenAI
-      const keywordList = keywords.slice(0, 5).map(k => k.keyword);
-      const titles = videos.map(v => v.title);
+      const keywordList = keywords.map(k => k.keyword);
+      const videoTitles = videos.map(v => v.title);
       
       try {
-        const { ideas } = await generateIdeas(keywordList, ["story", "tutorial"], titles);
-        const guidance = await generateGuidance({ keywords: keywordList }); // Pass simplified stats
+        const diagnosisData = diagnoseAndPlan(channelAnalytics, keywordList, videoTitles);
+        
+        // Prepare guidance based on the first experiment's ideas if available
+        const allIdeas = diagnosisData.experiments.flatMap(e => e.ideas);
+        
+        const formatGroups: Record<string, number[]> = {};
+        metrics.forEach(m => {
+            if (!formatGroups[m.format!]) formatGroups[m.format!] = [];
+            formatGroups[m.format!].push(m.crps || 0);
+        });
+        
+        const avgCrpsByFormat = Object.entries(formatGroups).map(([format, scores]) => ({
+            format,
+            crps: scores.reduce((a, b) => a + b, 0) / scores.length
+        })).sort((a,b) => b.crps - a.crps);
 
-        res.json({ ideas: ideas || [], guidance });
+        const guidance = generateStaticGuidance(allIdeas, { 
+          analytics: channelAnalytics, 
+          avgCrpsByFormat 
+        });
+
+        res.json({ 
+          diagnosis: {
+            strengths: diagnosisData.strengths,
+            constraints: diagnosisData.constraints
+          },
+          strategy: diagnosisData.strategy,
+          experiments: diagnosisData.experiments,
+          guidance // Keep for compatibility but UI will focus on experiments
+        });
       } catch (e: any) {
-        console.error("OpenAI Error:", e);
+        console.error("Analysis Error:", e);
         res.status(500).json({ message: "Failed to generate recommendations" });
       }
   });

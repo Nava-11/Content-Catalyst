@@ -34,11 +34,20 @@ export const api = {
     path: "/api/recommendations/:channelId",
     responses: {
       200: z.object({
-        ideas: z.array(z.object({
-          title: z.string(),
-          format: z.string(),
-          whyItWorks: z.string(),
-          suggestedPostingTime: z.string(),
+        diagnosis: z.object({
+          strengths: z.array(z.string()),
+          constraints: z.array(z.string()),
+        }),
+        strategy: z.array(z.string()),
+        experiments: z.array(z.object({
+          experimentType: z.string(),
+          ideas: z.array(z.object({
+            title: z.string(),
+            experimentType: z.string().optional(),
+            format: z.string(),
+            whyItWorks: z.string(),
+            suggestedPostingTime: z.string(),
+          }))
         })),
         guidance: z.object({
           topFormat: z.string(),

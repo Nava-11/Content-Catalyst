@@ -1,13 +1,20 @@
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { cn } from "@/lib/utils";
 import { LayoutDashboard, Lightbulb, Compass, Search } from "lucide-react";
 import { Link } from "wouter";
 
 export function Navigation() {
   const [location] = useLocation();
+  const searchString = useSearch();
+  const params = new URLSearchParams(searchString);
+  const channelId = params.get("channelId");
 
   // Simple check to see if we are in a dashboard view
   const isDashboard = location.includes('/dashboard');
+
+  const getDashboardHref = (tab: string) => {
+    return `/dashboard/${tab}${channelId ? `?channelId=${channelId}` : ''}`;
+  };
 
   return (
     <nav className="border-b border-border bg-card/50 backdrop-blur-xl sticky top-0 z-50">
@@ -25,7 +32,7 @@ export function Navigation() {
           {isDashboard && (
             <div className="hidden md:flex items-center space-x-1">
               <Link 
-                href="/dashboard/overview"
+                href={getDashboardHref('overview')}
                 className={cn(
                   "px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2",
                   location.includes('overview') 
@@ -37,7 +44,7 @@ export function Navigation() {
                 Overview
               </Link>
               <Link 
-                href="/dashboard/ideas"
+                href={getDashboardHref('ideas')}
                 className={cn(
                   "px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2",
                   location.includes('ideas') 
@@ -49,7 +56,7 @@ export function Navigation() {
                 Ideas
               </Link>
               <Link 
-                href="/dashboard/guidance"
+                href={getDashboardHref('guidance')}
                 className={cn(
                   "px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2",
                   location.includes('guidance') 

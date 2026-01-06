@@ -4,7 +4,7 @@ import { useChannelAnalytics, useChannelRecommendations } from "@/hooks/use-anal
 import { Navigation } from "@/components/Navigation";
 import { MetricCard } from "@/components/MetricCard";
 import { ViewsChart, FormatChart } from "@/components/Charts";
-import { Loader2, Users, Play, MessageSquare, Clock, Calendar, AlertCircle } from "lucide-react";
+import { Loader2, Users, Play, MessageSquare, Clock, Calendar, AlertCircle, Lightbulb } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 
@@ -179,47 +179,75 @@ export default function Dashboard() {
             >
               <div className="flex items-center justify-between">
                 <div>
-                  <h1 className="text-3xl font-display font-bold">Generated Concepts</h1>
-                  <p className="text-muted-foreground">Fresh angles based on your best performing formats</p>
+                  <h1 className="text-3xl font-display font-bold">Recommended Content Experiments</h1>
+                  <p className="text-muted-foreground">Strategic experiments based on your channel diagnosis</p>
                 </div>
               </div>
 
-              {recommendationsData?.ideas && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {recommendationsData.ideas.map((idea, i) => (
-                    <div 
-                      key={i} 
-                      className="group bg-card border border-border/50 rounded-xl p-6 hover:border-primary/50 hover:shadow-2xl hover:shadow-primary/5 transition-all duration-300 relative overflow-hidden"
-                    >
-                      <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                        <Lightbulb className="w-24 h-24 rotate-12" />
-                      </div>
-                      
-                      <div className="relative z-10">
-                        <div className="flex items-center gap-2 mb-3">
-                          <span className="px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider bg-primary/10 text-primary">
-                            {idea.format}
-                          </span>
-                          <span className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Calendar className="w-3 h-3" /> Post: {idea.suggestedPostingTime}
-                          </span>
-                        </div>
-                        
-                        <h3 className="font-display font-bold text-xl mb-4 group-hover:text-primary transition-colors">
-                          {idea.title}
-                        </h3>
-                        
-                        <div className="p-4 rounded-lg bg-secondary/50 border border-border/50">
-                          <p className="text-sm text-muted-foreground leading-relaxed">
-                            <span className="font-semibold text-foreground block mb-1">Why this works:</span>
-                            {idea.whyItWorks}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+              {recommendationsData?.diagnosis && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="p-4 rounded-xl bg-green-500/5 border border-green-500/20">
+                    <h4 className="text-xs font-bold uppercase text-green-500 mb-2">Diagnosis Strengths</h4>
+                    <ul className="text-sm space-y-1">
+                      {recommendationsData.diagnosis.strengths.map((s: string, i: number) => (
+                        <li key={i} className="flex items-start gap-2">
+                          <span className="text-green-500 mt-1">•</span> {s}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div className="p-4 rounded-xl bg-orange-500/5 border border-orange-500/20">
+                    <h4 className="text-xs font-bold uppercase text-orange-500 mb-2">Diagnosis Constraints</h4>
+                    <ul className="text-sm space-y-1">
+                      {recommendationsData.diagnosis.constraints.map((c: string, i: number) => (
+                        <li key={i} className="flex items-start gap-2">
+                          <span className="text-orange-500 mt-1">•</span> {c}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 </div>
               )}
+
+              {recommendationsData?.experiments && recommendationsData.experiments.map((exp: any, expIdx: number) => (
+                <div key={expIdx} className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <div className="h-px flex-1 bg-border" />
+                    <h2 className="text-sm font-bold uppercase tracking-widest text-primary px-4 bg-background">
+                      {exp.experimentType}
+                    </h2>
+                    <div className="h-px flex-1 bg-border" />
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {exp.ideas.map((idea: any, i: number) => (
+                      <div 
+                        key={i} 
+                        className="group bg-card border border-border/50 rounded-xl p-6 hover:border-primary/50 hover:shadow-2xl hover:shadow-primary/5 transition-all duration-300 relative overflow-hidden"
+                      >
+                        <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                          <Lightbulb className="w-24 h-24 rotate-12" />
+                        </div>
+                        
+                        <div className="relative z-10">
+                          <div className="flex items-center gap-2 mb-3">
+                            <span className="px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider bg-primary/10 text-primary">
+                              {idea.format}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {idea.suggestedPostingTime}
+                            </span>
+                          </div>
+                          
+                          <h3 className="font-display font-bold text-xl mb-2 group-hover:text-primary transition-colors">
+                            {idea.title}
+                          </h3>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </motion.div>
           )}
 
@@ -234,62 +262,86 @@ export default function Dashboard() {
            >
              <div className="text-center mb-12">
                <h1 className="text-3xl font-display font-bold">Strategic Guidance</h1>
-               <p className="text-muted-foreground">How to structure your next viral video</p>
+               <p className="text-muted-foreground">Detailed breakdown of experiment hypotheses</p>
              </div>
 
-             {recommendationsData?.guidance && (
-               <div className="space-y-6">
+             {recommendationsData?.experiments && (
+               <div className="space-y-12">
+                 {/* Detail Cards for Ideas */}
+                 <div className="grid grid-cols-1 gap-6">
+                    {recommendationsData.experiments.flatMap((e: any) => e.ideas).map((idea: any, i: number) => (
+                      <div key={i} className="bg-card border border-border/50 rounded-xl p-6">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-bold text-primary underline">{idea.title}</h4>
+                          <span className="text-[10px] font-bold uppercase text-muted-foreground px-2 py-1 bg-muted rounded">
+                            {idea.format}
+                          </span>
+                        </div>
+                        <div className="p-4 rounded-lg bg-secondary/50 border border-border/50">
+                          <p className="text-sm text-muted-foreground leading-relaxed">
+                            <span className="font-semibold text-foreground block mb-1">Experiment Hypothesis:</span>
+                            {idea.whyItWorks}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                 </div>
+
                  {/* Hero Stats */}
-                 <div className="grid grid-cols-3 gap-4 mb-8">
-                   <div className="bg-primary/10 border border-primary/20 p-6 rounded-xl text-center">
-                     <p className="text-xs text-primary uppercase font-bold tracking-wider mb-1">Winning Format</p>
-                     <p className="text-xl font-bold font-display">{recommendationsData.guidance.topFormat}</p>
-                   </div>
-                   <div className="bg-card border border-border p-6 rounded-xl text-center">
-                     <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-1">Outperformance</p>
-                     <p className="text-xl font-bold font-display text-green-500">+{recommendationsData.guidance.diffVsOther}%</p>
-                   </div>
-                   <div className="bg-card border border-border p-6 rounded-xl text-center">
-                     <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-1">Ideal Length</p>
-                     <p className="text-xl font-bold font-display">{recommendationsData.guidance.optimalLength}</p>
-                   </div>
-                 </div>
-
-                 {/* Structure Timeline */}
-                 <div className="bg-card border border-border/50 rounded-2xl overflow-hidden">
-                   <div className="p-6 border-b border-border/50 bg-secondary/30">
-                     <h3 className="font-display font-bold text-lg">Optimal Video Structure</h3>
-                   </div>
-                   
-                   <div className="p-8 space-y-8 relative">
-                     {/* Connecting Line */}
-                     <div className="absolute left-[2.25rem] top-12 bottom-12 w-0.5 bg-border" />
-
-                     <div className="relative pl-12">
-                        <div className="absolute left-0 top-0 w-10 h-10 rounded-full bg-red-500/20 text-red-500 flex items-center justify-center font-bold border-4 border-card z-10">
-                          1
-                        </div>
-                        <h4 className="font-bold text-lg mb-2">The Hook (0:00 - 0:30)</h4>
-                        <p className="text-muted-foreground leading-relaxed">{recommendationsData.guidance.structure.hook}</p>
+                 {recommendationsData.guidance && (
+                   <>
+                     <div className="grid grid-cols-3 gap-4 mb-8">
+                       <div className="bg-primary/10 border border-primary/20 p-6 rounded-xl text-center">
+                         <p className="text-xs text-primary uppercase font-bold tracking-wider mb-1">Winning Format</p>
+                         <p className="text-xl font-bold font-display">{recommendationsData.guidance.topFormat}</p>
+                       </div>
+                       <div className="bg-card border border-border p-6 rounded-xl text-center">
+                         <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-1">Outperformance</p>
+                         <p className="text-xl font-bold font-display text-green-500">+{recommendationsData.guidance.diffVsOther}%</p>
+                       </div>
+                       <div className="bg-card border border-border p-6 rounded-xl text-center">
+                         <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-1">Ideal Length</p>
+                         <p className="text-xl font-bold font-display">{recommendationsData.guidance.optimalLength}</p>
+                       </div>
                      </div>
 
-                     <div className="relative pl-12">
-                        <div className="absolute left-0 top-0 w-10 h-10 rounded-full bg-orange-500/20 text-orange-500 flex items-center justify-center font-bold border-4 border-card z-10">
-                          2
-                        </div>
-                        <h4 className="font-bold text-lg mb-2">The Core Value</h4>
-                        <p className="text-muted-foreground leading-relaxed">{recommendationsData.guidance.structure.body}</p>
-                     </div>
+                     {/* Structure Timeline */}
+                     <div className="bg-card border border-border/50 rounded-2xl overflow-hidden">
+                       <div className="p-6 border-b border-border/50 bg-secondary/30">
+                         <h3 className="font-display font-bold text-lg">Optimal Video Structure</h3>
+                       </div>
+                       
+                       <div className="p-8 space-y-8 relative">
+                         {/* Connecting Line */}
+                         <div className="absolute left-[2.25rem] top-12 bottom-12 w-0.5 bg-border" />
 
-                     <div className="relative pl-12">
-                        <div className="absolute left-0 top-0 w-10 h-10 rounded-full bg-green-500/20 text-green-500 flex items-center justify-center font-bold border-4 border-card z-10">
-                          3
-                        </div>
-                        <h4 className="font-bold text-lg mb-2">The Call to Action</h4>
-                        <p className="text-muted-foreground leading-relaxed">{recommendationsData.guidance.structure.cta}</p>
+                         <div className="relative pl-12">
+                            <div className="absolute left-0 top-0 w-10 h-10 rounded-full bg-red-500/20 text-red-500 flex items-center justify-center font-bold border-4 border-card z-10">
+                              1
+                            </div>
+                            <h4 className="font-bold text-lg mb-2">The Hook (0:00 - 0:30)</h4>
+                            <p className="text-muted-foreground leading-relaxed">{recommendationsData.guidance.structure.hook}</p>
+                         </div>
+
+                         <div className="relative pl-12">
+                            <div className="absolute left-0 top-0 w-10 h-10 rounded-full bg-orange-500/20 text-orange-500 flex items-center justify-center font-bold border-4 border-card z-10">
+                              2
+                            </div>
+                            <h4 className="font-bold text-lg mb-2">The Core Value</h4>
+                            <p className="text-muted-foreground leading-relaxed">{recommendationsData.guidance.structure.body}</p>
+                         </div>
+
+                         <div className="relative pl-12">
+                            <div className="absolute left-0 top-0 w-10 h-10 rounded-full bg-green-500/20 text-green-500 flex items-center justify-center font-bold border-4 border-card z-10">
+                              3
+                            </div>
+                            <h4 className="font-bold text-lg mb-2">The Call to Action</h4>
+                            <p className="text-muted-foreground leading-relaxed">{recommendationsData.guidance.structure.cta}</p>
+                         </div>
+                       </div>
                      </div>
-                   </div>
-                 </div>
+                   </>
+                 )}
                </div>
              )}
            </motion.div>
