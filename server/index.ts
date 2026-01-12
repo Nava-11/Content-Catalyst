@@ -63,12 +63,24 @@ app.use((req, res, next) => {
 (async () => {
   await registerRoutes(httpServer, app);
 
+  // Express error handler: return JSON but DO NOT re-throw — re-throwing here crashes the whole process.
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
 
+    // log the error for diagnostics, then respond
+    console.error('Express error handled:', err && err.stack ? err.stack : err);
     res.status(status).json({ message });
-    throw err;
+    // do not re-throw
+  });
+
+  // Global handlers to prevent the process from exiting on unhandled errors
+  process.on('unhandledRejection', (reason) => {
+    console.error('Unhandled Rejection:', reason);
+  });
+
+  process.on('uncaughtException', (err) => {
+    console.error('Uncaught Exception:', err && err.stack ? err.stack : err);
   });
 
   // importantly only setup vite in development and after

@@ -1,6 +1,6 @@
 import { useLocation, useSearch } from "wouter";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, Lightbulb, Compass, Search } from "lucide-react";
+import { LayoutDashboard, Lightbulb, Search } from "lucide-react";
 import { Link } from "wouter";
 
 export function Navigation() {
@@ -54,18 +54,6 @@ export function Navigation() {
               >
                 <Lightbulb className="w-4 h-4" />
                 Ideas
-              </Link>
-              <Link 
-                href={getDashboardHref('guidance')}
-                className={cn(
-                  "px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2",
-                  location.includes('guidance') 
-                    ? "bg-primary/10 text-primary" 
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                )}
-              >
-                <Compass className="w-4 h-4" />
-                Guidance
               </Link>
             </div>
           )}

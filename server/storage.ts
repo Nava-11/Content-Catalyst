@@ -1,8 +1,8 @@
 import { db } from "./db";
 import {
-  videos, channelAnalytics, videoMetrics, topKeywords,
+  videos, channelAnalytics, videoMetrics, topKeywords, clusters, ideas,
   type InsertVideo, type InsertVideoMetricsSchema, type InsertChannelAnalyticsSchema, type InsertTopKeywordSchema,
-  type Video, type ChannelAnalytics, type VideoMetric, type TopKeyword
+  type Video, type ChannelAnalytics, type VideoMetric, type TopKeyword, type Cluster, type IdeaRow
 } from "@shared/schema";
 import { eq, desc } from "drizzle-orm";
 
@@ -27,6 +27,13 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  // In-memory fallback when DB tables (clusters/ideas) are missing
+  private _mem: { clusters: Record<string, any[]>; ideas: Record<string, any[]> } = { clusters: {}, ideas: {} };
+
+  private isRelationMissing(err: any) {
+    return err && (err.code === '42P01' || (err.message && typeof err.message === 'string' && err.message.includes('relation')));
+  }
+
   async upsertVideo(video: InsertVideo): Promise<Video> {
     const existing = await db.select().from(videos).where(eq(videos.videoId, video.videoId));
     if (existing.length > 0) {
@@ -105,6 +112,109 @@ export class DatabaseStorage implements IStorage {
 
   async getTopKeywords(channelId: string): Promise<TopKeyword[]> {
     return await db.select().from(topKeywords).where(eq(topKeywords.channelId, channelId)).orderBy(desc(topKeywords.score));
+  }
+
+  // Clusters & Ideas
+  async upsertCluster(cluster: any): Promise<any> {
+    try {
+      const existing = await db.select().from(clusters).where(eq(clusters.clusterId, cluster.clusterId));
+      if (existing.length > 0) {
+        const [updated] = await db.update(clusters).set(cluster).where(eq(clusters.clusterId, cluster.clusterId)).returning();
+        return updated;
+      }
+      const [inserted] = await db.insert(clusters).values(cluster).returning();
+      return inserted;
+    } catch (err: any) {
+      if (this.isRelationMissing(err)) {
+        const ch = cluster.channelId;
+        this._mem.clusters[ch] = this._mem.clusters[ch] || [];
+        const idx = this._mem.clusters[ch].findIndex((c:any) => c.clusterId === cluster.clusterId);
+        if (idx >= 0) this._mem.clusters[ch][idx] = { ...this._mem.clusters[ch][idx], ...cluster };
+        else this._mem.clusters[ch].push(cluster);
+        return cluster;
+      }
+      throw err;
+    }
+  }
+
+  async clearClusters(channelId: string): Promise<void> {
+    try {
+      await db.delete(clusters).where(eq(clusters.channelId, channelId));
+    } catch (err: any) {
+      if (this.isRelationMissing(err)) {
+        delete this._mem.clusters[channelId];
+        return;
+      }
+      throw err;
+    }
+  }
+
+  async getClusters(channelId: string): Promise<any[]> {
+    try {
+      return await db.select().from(clusters).where(eq(clusters.channelId, channelId)).orderBy(desc(clusters.lastUpdated));
+    } catch (err: any) {
+      if (this.isRelationMissing(err)) {
+        return this._mem.clusters[channelId] || [];
+      }
+      throw err;
+    }
+  }
+
+  async upsertIdea(idea: any): Promise<any> {
+    try {
+      const [inserted] = await db.insert(ideas).values(idea).returning();
+      return inserted;
+    } catch (err: any) {
+      if (this.isRelationMissing(err)) {
+        const ch = idea.channelId;
+        this._mem.ideas[ch] = this._mem.ideas[ch] || [];
+        const id = (this._mem.ideas[ch].length ? (this._mem.ideas[ch][0].id + 1) : 1) || Math.floor(Math.random()*100000);
+        const row = { id, ...idea };
+        this._mem.ideas[ch].unshift(row);
+        return row;
+      }
+      throw err;
+    }
+  }
+
+  async getIdeas(channelId: string): Promise<any[]> {
+    try {
+      return await db.select().from(ideas).where(eq(ideas.channelId, channelId)).orderBy(desc(ideas.createdAt));
+    } catch (err: any) {
+      if (this.isRelationMissing(err)) {
+        return this._mem.ideas[channelId] || [];
+      }
+      throw err;
+    }
+  }
+
+  async getIdeaById(id: number): Promise<any | undefined> {
+    try {
+      const [r] = await db.select().from(ideas).where(eq(ideas.id, id));
+      return r;
+    } catch (err: any) {
+      if (this.isRelationMissing(err)) {
+        for (const ch of Object.keys(this._mem.ideas)) {
+          const found = (this._mem.ideas[ch] || []).find(i => i.id === id);
+          if (found) return found;
+        }
+        return undefined;
+      }
+      throw err;
+    }
+  }
+
+  async recentIdeaEmbeddings(channelId: string, limit = 50): Promise<number[][]> {
+    try {
+      const rows = await db.select().from(ideas).where(eq(ideas.channelId, channelId)).orderBy(desc(ideas.createdAt)).limit(limit);
+      return rows.map(r => (r.embedding || []));
+    } catch (err: any) {
+      if (this.isRelationMissing(err)) {
+        const rows = (this._mem.ideas[channelId] || []).slice(0, limit);
+        return rows.map((r:any) => r.embedding || []);
+      }
+      throw err;
+    }
   }
 }
 

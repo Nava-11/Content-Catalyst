@@ -35,36 +35,51 @@ export const api = {
     responses: {
       200: z.object({
         diagnosis: z.object({
-          strengths: z.array(z.string()),
-          constraints: z.array(z.string()),
+          comfortable: z.array(z.string()),
+          curious: z.array(z.string()),
+          disengaged: z.array(z.string()),
         }),
         strategy: z.array(z.string()),
         experiments: z.array(z.object({
           experimentType: z.string(),
+          description: z.string().optional(),
           ideas: z.array(z.object({
+            id: z.number(),
             title: z.string(),
-            experimentType: z.string().optional(),
             format: z.string(),
-            whyItWorks: z.string(),
             suggestedPostingTime: z.string(),
+            rationale: z.string(),
+            note: z.string().optional(),
+            // High-level per-idea guidance is now generated on demand via the deep-dive endpoint.
           }))
         })),
-        guidance: z.object({
-          topFormat: z.string(),
-          topFormatCrps: z.number(),
-          diffVsOther: z.number(),
-          optimalLength: z.string(),
-          bestTime: z.string(),
-          structure: z.object({
-            hook: z.string(),
-            body: z.string(),
-            cta: z.string(),
-          }),
-        }),
+        topicClusters: z.array(z.object({
+          index: z.number(),
+          label: z.string(),
+          avgCrps: z.number(),
+          size: z.number(),
+          performanceSummary: z.string(),
+        })),
       }),
       404: z.object({ message: z.string() }),
     },
   },
+  chat: {
+    method: "POST" as const,
+    path: "/api/chat",
+    input: z.object({
+      channelId: z.string(),
+      message: z.string(),
+      previousMessages: z.array(z.object({
+        role: z.enum(["user", "assistant"]),
+        content: z.string()
+      })).optional()
+    }),
+    responses: {
+      200: z.object({ message: z.string() }),
+      500: z.object({ message: z.string() }),
+    }
+  }
 };
 
 export function buildUrl(path: string, params?: Record<string, string | number>): string {

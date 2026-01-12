@@ -121,8 +121,8 @@ export default function Home() {
               <div className="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-500 mb-4">
                 <Search className="w-6 h-6" />
               </div>
-              <h3 className="font-display font-bold text-lg mb-2">Content Guidance</h3>
-              <p className="text-muted-foreground text-sm">Get structural advice on hooks, pacing, and CTAs tailored to your top-performing formats.</p>
+              <h3 className="font-display font-bold text-lg mb-2">Idea Blueprints</h3>
+              <p className="text-muted-foreground text-sm">Open any recommended idea to see a deep-dive blueprint grounded in your own audience data.</p>
             </div>
           </motion.div>
         </div>

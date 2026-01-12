@@ -47,11 +47,38 @@ export const topKeywords = pgTable("top_keywords", {
   score: real("score").default(0),
 });
 
+// Table: clusters
+export const clusters = pgTable("clusters", {
+  id: serial("id").primaryKey(),
+  clusterId: text("cluster_id").notNull(),
+  channelId: text("channel_id").notNull(),
+  centroid: json("centroid_embedding"),
+  avgCrps: real("avg_crps"),
+  dominantFormats: json("dominant_formats"),
+  size: integer("size"),
+  lastUpdated: timestamp("last_updated").defaultNow(),
+});
+
+// Table: ideas
+export const ideas = pgTable("ideas", {
+  id: serial("id").primaryKey(),
+  channelId: text("channel_id").notNull(),
+  title: text("title").notNull(),
+  format: text("format"),
+  experimentType: text("experiment_type"),
+  suggestedPostingTime: text("suggested_posting_time"),
+  embedding: json("embedding"),
+  sourceClusterId: text("source_cluster_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Zod Schemas
 export const insertVideoSchema = createInsertSchema(videos).omit({ id: true });
 export const insertChannelAnalyticsSchema = createInsertSchema(channelAnalytics).omit({ id: true, lastUpdated: true });
 export const insertVideoMetricsSchema = createInsertSchema(videoMetrics).omit({ id: true });
 export const insertTopKeywordSchema = createInsertSchema(topKeywords).omit({ id: true });
+export const insertClusterSchema = createInsertSchema(clusters).omit({ id: true, lastUpdated: true });
+export const insertIdeaSchema = createInsertSchema(ideas).omit({ id: true, createdAt: true });
 
 // Types
 export type Video = typeof videos.$inferSelect;
@@ -59,28 +86,38 @@ export type InsertVideo = z.infer<typeof insertVideoSchema>;
 export type ChannelAnalytics = typeof channelAnalytics.$inferSelect;
 export type VideoMetric = typeof videoMetrics.$inferSelect;
 export type TopKeyword = typeof topKeywords.$inferSelect;
+export type Cluster = typeof clusters.$inferSelect;
+export type InsertCluster = z.infer<typeof insertClusterSchema>;
+export type IdeaRow = typeof ideas.$inferSelect;
+export type InsertIdea = z.infer<typeof insertIdeaSchema>;
 
 export type Idea = {
+  id: number;
   title: string;
   format: string;
-  whyItWorks: string;
   suggestedPostingTime: string;
+  rationale: string;
 };
 
-export type ContentGuidance = {
-  topFormat: string;
-  topFormatCrps: number;
-  diffVsOther: number;
-  optimalLength: string;
-  bestTime: string;
-  structure: {
-    hook: string;
-    body: string;
-    cta: string;
-  };
+export type TopicClusterSummary = {
+  index: number;
+  label: string;
+  avgCrps: number;
+  size: number;
+  performanceSummary: string;
 };
 
 export type RecommendationsResponse = {
-  ideas: Idea[];
-  guidance: ContentGuidance;
+  diagnosis: {
+    comfortable: string[];
+    curious: string[];
+    disengaged: string[];
+  };
+  strategy: string[];
+  experiments: {
+    experimentType: string;
+    description?: string;
+    ideas: Idea[];
+  }[];
+  topicClusters: TopicClusterSummary[];
 };
