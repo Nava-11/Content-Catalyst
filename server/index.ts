@@ -23,6 +23,12 @@ app.use(
 
 app.use(express.urlencoded({ extended: false }));
 
+import cookieParser from "cookie-parser";
+app.use(cookieParser());
+
+import passport from "passport";
+app.use(passport.initialize());
+
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
     hour: "numeric",
@@ -100,13 +106,13 @@ app.use((req, res, next) => {
   const port = parseInt(process.env.PORT || "5000", 10);
 
   httpServer.listen(
-  {
-    port,
-    host: "127.0.0.1",
-  },
-  () => {
-    log(`serving on http://localhost:${port}`);
-  },
-);
+    {
+      port,
+      host: "127.0.0.1",
+    },
+    () => {
+      log(`serving on http://localhost:${port}`);
+    },
+  );
 
 })();

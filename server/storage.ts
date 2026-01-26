@@ -1,7 +1,8 @@
 import { db } from "./db";
+export { db };
 import {
   videos, channelAnalytics, videoMetrics, topKeywords, clusters, ideas,
-  type InsertVideo, type InsertVideoMetricsSchema, type InsertChannelAnalyticsSchema, type InsertTopKeywordSchema,
+  type InsertVideo, type InsertVideoMetricsSchema, type InsertTopKeywordSchema,
   type Video, type ChannelAnalytics, type VideoMetric, type TopKeyword, type Cluster, type IdeaRow
 } from "@shared/schema";
 import { eq, desc } from "drizzle-orm";
@@ -10,11 +11,11 @@ export interface IStorage {
   // Videos
   upsertVideo(video: InsertVideo): Promise<Video>;
   getVideos(channelId: string): Promise<Video[]>;
-  
+
   // Analytics
   upsertChannelAnalytics(analytics: any): Promise<ChannelAnalytics>; // Type 'any' for now to simplify Partial matching
   getChannelAnalytics(channelId: string): Promise<ChannelAnalytics | undefined>;
-  
+
   // Metrics
   upsertVideoMetric(metric: any): Promise<VideoMetric>;
   getVideoMetrics(channelId: string): Promise<VideoMetric[]>; // Requires join, or just list by videoIds (not implemented efficiently here but okay for MVP)
@@ -90,8 +91,8 @@ export class DatabaseStorage implements IStorage {
     // Or better, let's return metrics for these videos.
     const metrics: VideoMetric[] = [];
     for (const v of videosList) {
-       const m = await this.getVideoMetricsForVideo(v.videoId);
-       if (m) metrics.push(m);
+      const m = await this.getVideoMetricsForVideo(v.videoId);
+      if (m) metrics.push(m);
     }
     return metrics;
   }
@@ -128,7 +129,7 @@ export class DatabaseStorage implements IStorage {
       if (this.isRelationMissing(err)) {
         const ch = cluster.channelId;
         this._mem.clusters[ch] = this._mem.clusters[ch] || [];
-        const idx = this._mem.clusters[ch].findIndex((c:any) => c.clusterId === cluster.clusterId);
+        const idx = this._mem.clusters[ch].findIndex((c: any) => c.clusterId === cluster.clusterId);
         if (idx >= 0) this._mem.clusters[ch][idx] = { ...this._mem.clusters[ch][idx], ...cluster };
         else this._mem.clusters[ch].push(cluster);
         return cluster;
@@ -168,7 +169,7 @@ export class DatabaseStorage implements IStorage {
       if (this.isRelationMissing(err)) {
         const ch = idea.channelId;
         this._mem.ideas[ch] = this._mem.ideas[ch] || [];
-        const id = (this._mem.ideas[ch].length ? (this._mem.ideas[ch][0].id + 1) : 1) || Math.floor(Math.random()*100000);
+        const id = (this._mem.ideas[ch].length ? (this._mem.ideas[ch][0].id + 1) : 1) || Math.floor(Math.random() * 100000);
         const row = { id, ...idea };
         this._mem.ideas[ch].unshift(row);
         return row;
@@ -207,11 +208,11 @@ export class DatabaseStorage implements IStorage {
   async recentIdeaEmbeddings(channelId: string, limit = 50): Promise<number[][]> {
     try {
       const rows = await db.select().from(ideas).where(eq(ideas.channelId, channelId)).orderBy(desc(ideas.createdAt)).limit(limit);
-      return rows.map(r => (r.embedding || []));
+      return rows.map(r => ((r.embedding as number[]) || []));
     } catch (err: any) {
       if (this.isRelationMissing(err)) {
         const rows = (this._mem.ideas[channelId] || []).slice(0, limit);
-        return rows.map((r:any) => r.embedding || []);
+        return rows.map((r: any) => r.embedding || []);
       }
       throw err;
     }

@@ -85,10 +85,18 @@ export function silhouetteScore(embeddings: number[][], labels: number[]): numbe
 
 export function clusterEmbeddingsFallback(embeddings: number[][], minK = 3, maxK = 8) {
   if (embeddings.length === 0) return { labels: [], centroids: [], k: 0 };
+
+  // Strict Constraint: Max clusters based on video count
+  let effectiveMaxK = maxK;
+  if (embeddings.length <= 30) effectiveMaxK = Math.min(maxK, 5);
+  else if (embeddings.length <= 60) effectiveMaxK = Math.min(maxK, 7);
+  else effectiveMaxK = Math.min(maxK, 8); // Never exceed 8ish even for large channels
+
   let best = { score: -Infinity, labels: [] as number[], centroids: [] as number[][], k: 0 };
-  for (let k = Math.min(minK, embeddings.length); k <= Math.min(maxK, embeddings.length); k++) {
+  for (let k = Math.min(minK, embeddings.length); k <= Math.min(effectiveMaxK, embeddings.length); k++) {
     const { labels, centroids } = kmeans(embeddings, k);
     const score = silhouetteScore(embeddings, labels);
+    // Bias towards fewer clusters if scores are close? Silhouette handles this naturally but let's be safe
     if (score > best.score) best = { score, labels, centroids, k };
   }
   return best;

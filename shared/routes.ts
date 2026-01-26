@@ -50,6 +50,7 @@ export const api = {
             suggestedPostingTime: z.string(),
             rationale: z.string(),
             note: z.string().optional(),
+            score: z.number().optional(),
             // High-level per-idea guidance is now generated on demand via the deep-dive endpoint.
           }))
         })),

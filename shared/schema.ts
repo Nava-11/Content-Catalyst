@@ -72,6 +72,54 @@ export const ideas = pgTable("ideas", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Table: users
+// Table: users
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(),
+  email: text("email").notNull().unique(),
+  name: text("name").notNull(),
+  password: text("password"), // Nullable for Google-only users
+  googleId: text("google_id").unique(), // OpenID 'sub'
+  profilePic: text("profile_pic"),
+  createdAt: timestamp("created_at").defaultNow(),
+  // Legacy fields kept optional for safety/migration if needed, or removed if clean slate.
+  // User auth approved clean slate, but let's keep ids generic.
+});
+
+// Table: creator_profiles
+export const creatorProfiles = pgTable("creator_profiles", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  channelId: text("channel_id").notNull(),
+  channelTitle: text("channel_title"),
+  subscriberCount: integer("subscriber_count"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Table: user_preferences
+export const userPreferences = pgTable("user_preferences", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  riskTolerance: text("risk_tolerance").default("moderate"), // conservative, moderate, aggressive
+  tonePreference: text("tone_preference").default("balanced"),
+});
+
+// Table: idea_interactions
+export const ideaInteractions = pgTable("idea_interactions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  ideaId: integer("idea_id").notNull(),
+  actionType: text("action_type").notNull(), // clicked, saved, ignored
+  timestamp: timestamp("timestamp").defaultNow(),
+});
+
+export const sessions = pgTable("sessions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  token: text("token").notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+});
+
 // Zod Schemas
 export const insertVideoSchema = createInsertSchema(videos).omit({ id: true });
 export const insertChannelAnalyticsSchema = createInsertSchema(channelAnalytics).omit({ id: true, lastUpdated: true });
@@ -79,6 +127,9 @@ export const insertVideoMetricsSchema = createInsertSchema(videoMetrics).omit({ 
 export const insertTopKeywordSchema = createInsertSchema(topKeywords).omit({ id: true });
 export const insertClusterSchema = createInsertSchema(clusters).omit({ id: true, lastUpdated: true });
 export const insertIdeaSchema = createInsertSchema(ideas).omit({ id: true, createdAt: true });
+export const insertUserSchema = createInsertSchema(users).omit({ id: true });
+export const insertUserPreferencesSchema = createInsertSchema(userPreferences).omit({ id: true });
+export const insertIdeaInteractionSchema = createInsertSchema(ideaInteractions).omit({ id: true, timestamp: true });
 
 // Types
 export type Video = typeof videos.$inferSelect;
@@ -90,6 +141,9 @@ export type Cluster = typeof clusters.$inferSelect;
 export type InsertCluster = z.infer<typeof insertClusterSchema>;
 export type IdeaRow = typeof ideas.$inferSelect;
 export type InsertIdea = z.infer<typeof insertIdeaSchema>;
+export type InsertTopKeywordSchema = z.infer<typeof insertTopKeywordSchema>;
+export type InsertChannelAnalyticsSchema = z.infer<typeof insertChannelAnalyticsSchema>;
+export type InsertVideoMetricsSchema = z.infer<typeof insertVideoMetricsSchema>;
 
 export type Idea = {
   id: number;

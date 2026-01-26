@@ -84,6 +84,13 @@ export default function Dashboard() {
     setSelectedIdeaId(id);
     setIsLoadingDeepDive(true);
     setIdeaDeepDive(null);
+    // Fire and forget interaction log
+    fetch("/api/user/interact", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ideaId: id, actionType: "clicked" }),
+    }).catch(() => { }); // Ignore errors for analytics
+
     try {
       const res = await fetch(`/api/idea/${id}`, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to load idea details");
@@ -280,11 +287,29 @@ export default function Dashboard() {
                           <Lightbulb className="w-24 h-24 rotate-12" />
                         </div>
 
+                        {/* Rank Number */}
+                        <div className="absolute top-4 right-4 text-4xl font-display font-bold text-primary/20 group-hover:text-primary/10 transition-colors">
+                          #{i + 1}
+                        </div>
+
                         <div className="relative z-10">
-                          <div className="flex items-center gap-2 mb-3">
+                          <div className="flex items-center gap-2 mb-3 flex-wrap">
                             <span className="px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider bg-primary/10 text-primary">
                               {idea.format}
                             </span>
+
+                            {/* Confidence Badge */}
+                            {idea.score !== undefined && (
+                              <span className={cn(
+                                "px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider border backdrop-blur-sm",
+                                idea.score >= 70 ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30" :
+                                  idea.score >= 40 ? "bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border-indigo-500/30" :
+                                    "bg-rose-500/20 text-rose-600 dark:text-rose-400 border-rose-500/30"
+                              )}>
+                                {idea.score >= 70 ? "High Confidence" : idea.score >= 40 ? "Experimental" : "Risky"} ({idea.score}%)
+                              </span>
+                            )}
+
                             <span className="text-xs text-muted-foreground">
                               {idea.suggestedPostingTime}
                             </span>
@@ -293,6 +318,11 @@ export default function Dashboard() {
                           <h3 className="font-display font-bold text-xl mb-2 group-hover:text-primary transition-colors">
                             {idea.title}
                           </h3>
+
+                          {/* Short Explanation */}
+                          <p className="text-sm text-muted-foreground line-clamp-3">
+                            {idea.note || idea.rationale}
+                          </p>
                         </div>
                       </div>
                     )) : (
@@ -342,6 +372,33 @@ export default function Dashboard() {
                           <p className="text-sm text-muted-foreground">{ideaDeepDive.rationale}</p>
                         </div>
                       )}
+
+                      <div className="flex items-center gap-3 pt-4 border-t border-border/50">
+                        <button
+                          className="bg-primary/10 text-primary hover:bg-primary/20 px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex-1"
+                          onClick={() => {
+                            fetch("/api/user/interact", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ ideaId: selectedIdeaId, actionType: "saved" }),
+                            }).then(() => alert("Saved to Library!"));
+                          }}
+                        >
+                          Save to Library
+                        </button>
+                        <button
+                          className="bg-green-500/10 text-green-600 hover:bg-green-500/20 px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex-1 border border-green-500/20"
+                          onClick={() => {
+                            fetch("/api/user/interact", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ ideaId: selectedIdeaId, actionType: "published" }),
+                            }).then(() => alert("Marked as Published! (Reward signal sent)"));
+                          }}
+                        >
+                          Mark as Published
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>

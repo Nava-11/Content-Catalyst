@@ -1,5 +1,5 @@
-import { extractKeywords } from "./analysis";
-import { storage } from "../storage";
+import { extractKeywords } from "../features/analysis";
+import { storage } from "../../storage";
 
 // ===========================================================================
 // CREATOR WORLD MODELING (Stage 1)
@@ -269,10 +269,29 @@ function capitalize(s: string) {
 // PUBLIC API ADAPTERS (Connecting to the rest of the app)
 // ===========================================================================
 
+import { redis } from "../infrastructure/redis";
+
 export async function analyzeChannelForWorld(videos: any[]) {
+  // Generate a cache key based on the latest video ID (assumed sorted) or simple hash
+  // For MVP, just use channelId if available, passing it would be better.
+  // Since videos array is passed, let's hash the first video ID + count.
+  const signature = videos.length > 0 ? `${videos[0].title}:${videos.length}` : "empty";
+  const channelId = videos.length > 0 && videos[0].channelId ? videos[0].channelId : "unknown";
+  const cacheKey = `world:${channelId}:${signature}`;
+
+  const cached = await redis.get(cacheKey);
+  if (cached) {
+    return JSON.parse(cached);
+  }
+
   const titles = videos.map(v => v.title || "");
   const descriptions = videos.map(v => v.description || "");
-  return extractCreatorWorld(titles, descriptions);
+  const world = extractCreatorWorld(titles, descriptions);
+
+  // Cache for 1 hour
+  await redis.set(cacheKey, JSON.stringify(world), 'EX', 3600);
+
+  return world;
 }
 
 // Simple in-memory cache to support deep dive fetches for the research prototype.
@@ -280,7 +299,7 @@ export async function analyzeChannelForWorld(videos: any[]) {
 const ideaCache = new Map<number, any>();
 
 // Replaces the old "ideasFromExperiment"
-import { generateLensedIdeas } from "./groq";
+import { generateLensedIdeas } from "../chat/groq";
 
 // ... (previous code remains)
 
@@ -361,7 +380,7 @@ export async function analyzeChannel(videos: any[], metrics: any[], clusterList:
   // Return a dummy "diagnosis" that encourages creativity, 
   // replacing the old metric-heavy diagnosis.
   const world = await analyzeChannelForWorld(videos);
-  const coreEntities = world.entities.filter(e => e.frequency === "core").map(e => e.text).slice(0, 3);
+  const coreEntities = world.entities.filter((e: any) => e.frequency === "core").map((e: any) => e.text).slice(0, 3);
   const core = coreEntities.join(", ");
 
   const comfortable = coreEntities.length > 0

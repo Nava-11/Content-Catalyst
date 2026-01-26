@@ -1,13 +1,9 @@
 import natural from "natural";
 import { pipeline } from "@xenova/transformers";
+import { redis } from "../infrastructure/redis";
 
 let embeddingPipelinePromise: Promise<any> | null = null;
 
-// Very small in-memory cache so repeated calls for the same
-// texts (e.g. during /api/recommendations refreshes) do not
-// recompute embeddings. This stays process-local and keeps
-// behaviour deterministic for a given input.
-const embeddingCache = new Map<string, number[]>();
 
 async function getEmbeddingPipeline() {
   if (!embeddingPipelinePromise) {
@@ -59,9 +55,11 @@ export async function embedTexts(texts: string[]): Promise<number[][]> {
         continue;
       }
 
-      const cached = embeddingCache.get(input);
+      // Check Redis
+      const cacheKey = `emb:${input.slice(0, 64)}`; // Short key for mock
+      const cached = await redis.get(cacheKey);
       if (cached) {
-        vectors.push(cached);
+        vectors.push(JSON.parse(cached));
         continue;
       }
 
@@ -74,7 +72,9 @@ export async function embedTexts(texts: string[]): Promise<number[][]> {
       const tensor = Array.isArray(output) ? output[0] : output;
       const data: any = tensor.data || tensor;
       const arr = Array.from(data as Iterable<number>);
-      embeddingCache.set(input, arr);
+
+      // Save to Redis (24h TTL)
+      await redis.set(cacheKey, JSON.stringify(arr), 'EX', 86400);
       vectors.push(arr);
     }
 
