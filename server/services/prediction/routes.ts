@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { activeModel } from "./model";
 import { featureStore } from "../features/store";
+import { simulationEngine } from "./simulation";
 
 const router = Router();
 
@@ -28,6 +29,17 @@ router.post("/predict", async (req, res) => {
         res.json({ success: true, score, explanation: "Heuristic prediction based on CRPS and Duration" });
     } catch (error: any) {
         console.error("[Prediction] Error:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// POST /simulate
+router.post("/simulate", async (req, res) => {
+    try {
+        const { channelId, idea } = req.body;
+        const result = await simulationEngine.simulateIdea(channelId, idea);
+        res.json(result);
+    } catch (error: any) {
         res.status(500).json({ error: error.message });
     }
 });

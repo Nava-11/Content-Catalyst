@@ -7,6 +7,8 @@ type User = {
     name: string;
     picture?: string;
     channelId?: string;
+    channelTitle?: string;
+    subscriberCount?: number;
     isProfileComplete?: boolean;
 };
 
@@ -56,7 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             if (res.ok) {
                 const data = await res.json();
                 if (data.user) {
-                    setUser({ ...data.user, isProfileComplete: data.isProfileComplete, channelId: data.channelId });
+                    setUser({ ...data.user, isProfileComplete: data.isProfileComplete, channelId: data.channelId, channelTitle: data.channelTitle, subscriberCount: data.subscriberCount });
                 }
             }
         } catch {
@@ -76,7 +78,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser({
             ...data.user,
             isProfileComplete: data.isProfileComplete,
-            channelId: data.channelId
+            channelId: data.channelId,
+            channelTitle: data.channelTitle,
+            subscriberCount: data.subscriberCount
         });
 
         if (!data.isProfileComplete) {

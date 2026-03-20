@@ -1,6 +1,9 @@
 import { Router } from "express";
 import { fetchChannelVideos, parseDuration } from "./youtube";
-import { storage } from "../../storage";
+import { storage, db } from "../../storage";
+import { memoryIndexer } from "../agent/memory_indexer";
+import { creatorProfiles } from "../../../shared/schema";
+import { eq, and } from "drizzle-orm";
 import { api } from "../../../shared/routes";
 import { kafka, Topics } from "../infrastructure/kafka";
 
@@ -9,11 +12,27 @@ const router = Router();
 // Internal helper for "Service" logic
 export async function ingestChannel(channelId: string, apiKey: string) {
     console.log(`[Ingestion] Fetching videos for ${channelId}...`);
-    const ytVideos = await fetchChannelVideos(channelId, apiKey);
+    const { videos: ytVideos, metadata } = await fetchChannelVideos(channelId, apiKey);
 
     if (ytVideos.length === 0) {
         throw new Error("No videos found or channel invalid");
     }
+
+    // Capture Channel Metadata
+    console.log(`[Ingestion] Storing profile for ${metadata.title} (${metadata.subscriberCount} subs)`);
+    await db.insert(creatorProfiles).values({
+        userId: 1, // Mock system user
+        channelId,
+        channelTitle: metadata.title,
+        subscriberCount: metadata.subscriberCount,
+        createdAt: new Date()
+    }).onConflictDoUpdate({
+        target: [creatorProfiles.channelId],
+        set: {
+            channelTitle: metadata.title,
+            subscriberCount: metadata.subscriberCount
+        }
+    });
 
     let totalViews = 0;
     let totalLikes = 0;

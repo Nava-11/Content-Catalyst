@@ -21,7 +21,7 @@ export interface YouTubeVideo {
   };
 }
 
-export async function fetchChannelVideos(channelId: string, apiKey: string, maxResults = 50): Promise<YouTubeVideo[]> {
+export async function fetchChannelVideos(channelId: string, apiKey: string, maxResults = 50): Promise<{ videos: YouTubeVideo[], metadata: any }> {
   try {
     // Helper to retry an async operation a few times (exponential backoff)
     async function withRetries<T>(fn: () => Promise<T>, retries = 3, delayMs = 500): Promise<T> {
@@ -37,18 +37,26 @@ export async function fetchChannelVideos(channelId: string, apiKey: string, maxR
         }
       }
     }
-    // 1. Get Uploads Playlist ID
+    // 1. Get Uploads Playlist ID and Channel Metadata
     const channelResponse = await withRetries(() => youtube.channels.list({
       key: apiKey,
       id: [channelId],
-      part: ["contentDetails"],
+      part: ["contentDetails", "snippet", "statistics"],
     }));
 
     if (!channelResponse.data.items || channelResponse.data.items.length === 0) {
       throw new Error("Channel not found");
     }
 
-    const uploadsPlaylistId = channelResponse.data.items[0].contentDetails?.relatedPlaylists?.uploads;
+    const channelItem = channelResponse.data.items[0];
+    const uploadsPlaylistId = channelItem.contentDetails?.relatedPlaylists?.uploads;
+    const channelMetadata = {
+        title: channelItem.snippet?.title || "Unknown Channel",
+        subscriberCount: parseInt(channelItem.statistics?.subscriberCount || "0"),
+        viewCount: parseInt(channelItem.statistics?.viewCount || "0"),
+        videoCount: parseInt(channelItem.statistics?.videoCount || "0"),
+    };
+
     if (!uploadsPlaylistId) {
       throw new Error("Uploads playlist not found");
     }
@@ -63,7 +71,7 @@ export async function fetchChannelVideos(channelId: string, apiKey: string, maxR
 
     const videoIds = playlistResponse.data.items?.map((item) => item.snippet?.resourceId?.videoId).filter(Boolean) as string[];
 
-    if (videoIds.length === 0) return [];
+    if (videoIds.length === 0) return { videos: [], metadata: channelMetadata };
 
     // 3. Get Video Details (Stats + Duration)
     const videosResponse = await withRetries(() => youtube.videos.list({
@@ -72,10 +80,30 @@ export async function fetchChannelVideos(channelId: string, apiKey: string, maxR
       part: ["snippet", "statistics", "contentDetails"],
     }));
 
-    return videosResponse.data.items as YouTubeVideo[] || [];
+    return {
+      videos: (videosResponse.data.items as YouTubeVideo[]) || [],
+      metadata: channelMetadata
+    };
   } catch (error) {
     console.error("Error fetching YouTube data:", error);
     throw error;
+  }
+}
+
+export async function fetchVideoComments(videoId: string, apiKey: string, maxResults = 50): Promise<string[]> {
+  try {
+    const response = await youtube.commentThreads.list({
+      key: apiKey,
+      videoId: videoId,
+      part: ["snippet"],
+      maxResults: maxResults,
+      textFormat: "plainText",
+    });
+
+    return response.data.items?.map(item => item.snippet?.topLevelComment?.snippet?.textDisplay).filter(Boolean) as string[] || [];
+  } catch (error) {
+    console.warn(`Could not fetch comments for video ${videoId}:`, error);
+    return [];
   }
 }
 

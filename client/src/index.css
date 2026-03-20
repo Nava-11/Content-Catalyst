@@ -1,72 +1,107 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Oswald:wght@500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Syne:wght@400..800&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --font-body: 'Inter', sans-serif;
-  --font-display: 'Oswald', sans-serif;
+  /* Fonts */
+  --font-display: 'Syne', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
 
-  /* Modern Dark Theme (YouTube Analytics Style) */
-  --background: 240 10% 3.9%;
-  --foreground: 0 0% 98%;
+  /* Dark Cosmic Palette */
+  --bg-primary: #05060F;        /* near-black deep space */
+  --bg-secondary: #0C0E1A;      /* dark navy surface */
+  --bg-card: #111327;           /* card background */
+  
+  --accent-teal: #1DFFD2;       /* electric teal — primary accent */
+  --accent-violet: #8B5CF6;     /* violet — secondary accent */
+  --accent-amber: #F59E0B;      /* amber — highlight / warnings */
+  --accent-coral: #FF6B6B;      /* coral — fatigue / alerts */
+  
+  --text-primary: #F0F0FF;      /* near-white */
+  --text-secondary: #8890B5;    /* muted blue-grey */
+  --text-tertiary: #4A5080;     /* very muted */
+  
+  --border: rgba(255, 255, 255, 0.07);  /* subtle borders */
+  
+  --glow-teal: 0 0 40px rgba(29, 255, 210, 0.15);
+  --glow-violet: 0 0 40px rgba(139, 92, 246, 0.2);
 
-  --card: 240 10% 8%;
-  --card-foreground: 0 0% 98%;
-
-  --popover: 240 10% 3.9%;
-  --popover-foreground: 0 0% 98%;
-
-  --primary: 0 84% 60%;  /* YouTube Red-ish */
-  --primary-foreground: 0 0% 98%;
-
-  --secondary: 240 4% 16%;
-  --secondary-foreground: 0 0% 98%;
-
-  --muted: 240 4% 16%;
-  --muted-foreground: 240 5% 64.9%;
-
-  --accent: 0 84% 60%;
-  --accent-foreground: 0 0% 98%;
-
-  --destructive: 0 62.8% 30.6%;
+  /* Mapping to Standard Tailwind Variables for generic components */
+  --background: 236 50% 4%; /* #05060F approx */
+  --foreground: 240 100% 97%; /* #F0F0FF approx */
+  --card: 235 39% 11%;
+  --card-foreground: 240 100% 97%;
+  --popover: 236 50% 4%;
+  --popover-foreground: 240 100% 97%;
+  --primary: 168 100% 56%; /* #1DFFD2 approx */
+  --primary-foreground: 236 50% 4%;
+  --secondary: 234 37% 7%; /* #0C0E1A approx */
+  --secondary-foreground: 240 100% 97%;
+  --muted: 234 37% 7%;
+  --muted-foreground: 229 24% 62%; /* #8890B5 approx */
+  --accent: 262 83% 58%; /* #8B5CF6 approx */
+  --accent-foreground: 240 100% 97%;
+  --destructive: 356 100% 71%; /* #FF6B6B approx */
   --destructive-foreground: 0 0% 98%;
-
-  --border: 240 4% 16%;
-  --input: 240 4% 16%;
-  --ring: 0 84% 60%;
-
+  --ring: 168 100% 56%;
   --radius: 0.75rem;
 }
 
 @layer base {
   * {
-    @apply border-border;
+    border-color: var(--border);
   }
   body {
-    @apply bg-background text-foreground;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
     font-family: var(--font-body);
+    overflow-x: hidden;
   }
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-display);
-    @apply tracking-tight uppercase;
+    text-transform: none; /* overriding old uppercase */
+    letter-spacing: -0.02em;
+  }
+  
+  /* Utilities for the aesthetic */
+  .glass-card {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border);
+    backdrop-filter: blur(12px);
+  }
+  .glow-teal {
+    box-shadow: var(--glow-teal);
+  }
+  .glow-violet {
+    box-shadow: var(--glow-violet);
+  }
+  .text-gradient {
+    background: linear-gradient(135deg, var(--text-primary), var(--text-secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
   }
 }
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
-  @apply bg-secondary/30;
+  background: var(--bg-primary);
 }
 ::-webkit-scrollbar-thumb {
-  @apply bg-secondary rounded-full hover:bg-secondary/80 transition-colors;
+  background: var(--text-tertiary);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
 }
 
 /* Chart Tooltip Customization */
 .recharts-tooltip-cursor {
-  fill: rgba(255, 255, 255, 0.05) !important;
+  fill: rgba(255, 255, 255, 0.03) !important;
 }

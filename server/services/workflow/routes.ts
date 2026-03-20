@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { workflows } from "./engine";
+import { roadmapService } from "./roadmap";
 
 const router = Router();
 
@@ -15,6 +16,17 @@ router.post("/run/:name", async (req, res) => {
         res.json({ success: true, message: `Workflow ${name} started` });
     } catch (e: any) {
         res.status(500).json({ error: e.message });
+    }
+});
+
+// GET /roadmap/:channelId
+router.get("/roadmap/:channelId", async (req, res) => {
+    try {
+        const { channelId } = req.params;
+        const result = await roadmapService.generateRoadmap(channelId);
+        res.json(result);
+    } catch (error: any) {
+        res.status(500).json({ error: error.message });
     }
 });
 

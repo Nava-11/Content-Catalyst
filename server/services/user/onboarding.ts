@@ -28,17 +28,36 @@ router.post("/channel", async (req, res) => {
 
         // Validate Channel with YouTube
         const youtube = google.youtube("v3");
-        const apiKey = process.env.VITE_YOUTUBE_API_KEY || process.env.GOOGLE_CLIENT_SECRET; // Wait, client secret is not API Key.
-        // We need a Public API Key for simple checks or use the User's Access Token if we requested scopes.
-        // For simplicity, assume we have an API Key.
+        // We need a Public API Key for simple checks
+        const apiKey = process.env.YOUTUBE_API_KEY || process.env.VITE_YOUTUBE_API_KEY;
 
         if (!channelId) return res.status(400).json({ message: "Channel ID required" });
+
+        let channelTitle = "Detected Title";
+        let subscriberCount = 0;
+
+        if (apiKey) {
+            try {
+                const ytRes = await youtube.channels.list({
+                    key: apiKey,
+                    id: [channelId],
+                    part: ["snippet", "statistics"]
+                });
+                if (ytRes.data.items && ytRes.data.items.length > 0) {
+                    channelTitle = ytRes.data.items[0].snippet?.title || channelTitle;
+                    subscriberCount = parseInt(ytRes.data.items[0].statistics?.subscriberCount || "0");
+                }
+            } catch (ytError) {
+                console.error("YouTube API Profile Fetch Error:", ytError);
+            }
+        }
 
         // Insert Profile
         const [profile] = await db.insert(creatorProfiles).values({
             userId,
             channelId,
-            channelTitle: "Detected Title" // In real integration, fetch from YouTube API
+            channelTitle,
+            subscriberCount
         }).returning();
 
         res.json({ success: true, profile });

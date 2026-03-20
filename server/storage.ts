@@ -1,9 +1,9 @@
 import { db } from "./db";
 export { db };
 import {
-  videos, channelAnalytics, videoMetrics, topKeywords, clusters, ideas,
-  type InsertVideo, type InsertVideoMetricsSchema, type InsertTopKeywordSchema,
-  type Video, type ChannelAnalytics, type VideoMetric, type TopKeyword, type Cluster, type IdeaRow
+  videos, channelAnalytics, videoMetrics, topKeywords, clusters, ideas, audiencePersonas,
+  creatorStyleProfiles, narrativeAnalysis, audienceCuriositySignals, burnoutSignals, longevityPredictions, ecosystemHealthScores,
+  type InsertVideo, type Video, type ChannelAnalytics, type VideoMetric, type TopKeyword, type Cluster, type IdeaRow, type AudiencePersona
 } from "@shared/schema";
 import { eq, desc } from "drizzle-orm";
 
@@ -12,23 +12,52 @@ export interface IStorage {
   upsertVideo(video: InsertVideo): Promise<Video>;
   getVideos(channelId: string): Promise<Video[]>;
 
+  // Ideas
+  getIdeas(channelId: string): Promise<IdeaRow[]>;
+  updateIdeaStatus(id: number, status: string, publishedAt?: Date): Promise<IdeaRow>;
+
+  // Audience Persona methods
+  getAudiencePersonas(channelId: string): Promise<AudiencePersona[]>;
+  createAudiencePersona(persona: any): Promise<AudiencePersona>;
+
   // Analytics
-  upsertChannelAnalytics(analytics: any): Promise<ChannelAnalytics>; // Type 'any' for now to simplify Partial matching
+  upsertChannelAnalytics(analytics: any): Promise<ChannelAnalytics>;
   getChannelAnalytics(channelId: string): Promise<ChannelAnalytics | undefined>;
 
   // Metrics
   upsertVideoMetric(metric: any): Promise<VideoMetric>;
-  getVideoMetrics(channelId: string): Promise<VideoMetric[]>; // Requires join, or just list by videoIds (not implemented efficiently here but okay for MVP)
+  getVideoMetrics(channelId: string): Promise<VideoMetric[]>;
   getVideoMetricsForVideo(videoId: string): Promise<VideoMetric | undefined>;
 
   // Keywords
   upsertTopKeyword(keyword: any): Promise<TopKeyword>;
   getTopKeywords(channelId: string): Promise<TopKeyword[]>;
   clearTopKeywords(channelId: string): Promise<void>;
+
+  // Clusters & Ideas
+  upsertCluster(cluster: any): Promise<any>;
+  clearClusters(channelId: string): Promise<void>;
+  getClusters(channelId: string): Promise<any[]>;
+  upsertIdea(idea: any): Promise<any>;
+  getIdeaById(id: number): Promise<IdeaRow | undefined>;
+  recentIdeaEmbeddings(channelId: string, limit?: number): Promise<number[][]>;
+
+  // Advanced Features
+  upsertCreatorStyleProfile(profile: any): Promise<any>;
+  getCreatorStyleProfile(channelId: string): Promise<any>;
+  upsertNarrativeAnalysis(analysis: any): Promise<any>;
+  getNarrativeAnalysis(videoId: string): Promise<any>;
+  upsertAudienceCuriositySignal(signal: any): Promise<any>;
+  getAudienceCuriositySignals(channelId: string): Promise<any[]>;
+  upsertBurnoutSignal(signal: any): Promise<any>;
+  getBurnoutSignal(channelId: string): Promise<any>;
+  upsertLongevityPrediction(prediction: any): Promise<any>;
+  getLongevityPrediction(videoId: string): Promise<any>;
+  upsertEcosystemHealthScore(score: any): Promise<any>;
+  getEcosystemHealthScore(channelId: string): Promise<any>;
 }
 
 export class DatabaseStorage implements IStorage {
-  // In-memory fallback when DB tables (clusters/ideas) are missing
   private _mem: { clusters: Record<string, any[]>; ideas: Record<string, any[]> } = { clusters: {}, ideas: {} };
 
   private isRelationMissing(err: any) {
@@ -65,7 +94,6 @@ export class DatabaseStorage implements IStorage {
   }
 
   async upsertVideoMetric(metric: any): Promise<VideoMetric> {
-    // Check if exists
     const existing = await db.select().from(videoMetrics).where(eq(videoMetrics.videoId, metric.videoId));
     if (existing.length > 0) {
       const [updated] = await db.update(videoMetrics).set(metric).where(eq(videoMetrics.videoId, metric.videoId)).returning();
@@ -76,19 +104,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getVideoMetrics(channelId: string): Promise<VideoMetric[]> {
-    // In a real app we'd join, but here we can just fetch all metrics that match video IDs from that channel
-    // For MVP, simpler: fetch videos, then fetch metrics for those videos. 
-    // Actually, let's just return all metrics for now, or filtered by a list of IDs. 
-    // But IStorage interface is slightly leaky. Let's do a join query logic in the route or here.
-    // For simplicity, I'll fetch ALL metrics and filter in memory if dataset is small, or assume calling code handles it.
-    // Better: Helper query.
     const videosList = await this.getVideos(channelId);
     if (videosList.length === 0) return [];
-    const ids = videosList.map(v => v.videoId);
-    // Drizzle `inArray` would be good here.
-    // For now, let's just use raw SQL or loop (inefficient but safe for MVP).
-    // Actually, I'll just implement getVideos and let the route handle matching metrics for now.
-    // Or better, let's return metrics for these videos.
     const metrics: VideoMetric[] = [];
     for (const v of videosList) {
       const m = await this.getVideoMetricsForVideo(v.videoId);
@@ -115,7 +132,6 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(topKeywords).where(eq(topKeywords.channelId, channelId)).orderBy(desc(topKeywords.score));
   }
 
-  // Clusters & Ideas
   async upsertCluster(cluster: any): Promise<any> {
     try {
       const existing = await db.select().from(clusters).where(eq(clusters.clusterId, cluster.clusterId));
@@ -178,7 +194,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getIdeas(channelId: string): Promise<any[]> {
+  async getIdeas(channelId: string): Promise<IdeaRow[]> {
     try {
       return await db.select().from(ideas).where(eq(ideas.channelId, channelId)).orderBy(desc(ideas.createdAt));
     } catch (err: any) {
@@ -189,14 +205,31 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getIdeaById(id: number): Promise<any | undefined> {
+  async updateIdeaStatus(id: number, status: string, publishedAt?: Date): Promise<IdeaRow> {
+    const [updated] = await db.update(ideas)
+      .set({ status, publishedAt: publishedAt || null })
+      .where(eq(ideas.id, id))
+      .returning();
+    return updated;
+  }
+
+  async getAudiencePersonas(channelId: string): Promise<AudiencePersona[]> {
+    return await db.select().from(audiencePersonas).where(eq(audiencePersonas.channelId, channelId));
+  }
+
+  async createAudiencePersona(persona: any): Promise<AudiencePersona> {
+    const [created] = await db.insert(audiencePersonas).values(persona).returning();
+    return created;
+  }
+
+  async getIdeaById(id: number): Promise<IdeaRow | undefined> {
     try {
       const [r] = await db.select().from(ideas).where(eq(ideas.id, id));
       return r;
     } catch (err: any) {
       if (this.isRelationMissing(err)) {
         for (const ch of Object.keys(this._mem.ideas)) {
-          const found = (this._mem.ideas[ch] || []).find(i => i.id === id);
+          const found = (this._mem.ideas[ch] || []).find((i: any) => i.id === id);
           if (found) return found;
         }
         return undefined;
@@ -216,6 +249,91 @@ export class DatabaseStorage implements IStorage {
       }
       throw err;
     }
+  }
+
+  // Advanced Features Implementations
+  async upsertCreatorStyleProfile(profile: any): Promise<any> {
+    const existing = await db.select().from(creatorStyleProfiles).where(eq(creatorStyleProfiles.channelId, profile.channelId));
+    if (existing.length > 0) {
+      const [updated] = await db.update(creatorStyleProfiles).set(profile).where(eq(creatorStyleProfiles.channelId, profile.channelId)).returning();
+      return updated;
+    }
+    const [inserted] = await db.insert(creatorStyleProfiles).values(profile).returning();
+    return inserted;
+  }
+
+  async getCreatorStyleProfile(channelId: string): Promise<any> {
+    const [res] = await db.select().from(creatorStyleProfiles).where(eq(creatorStyleProfiles.channelId, channelId));
+    return res;
+  }
+
+  async upsertNarrativeAnalysis(analysis: any): Promise<any> {
+    const existing = await db.select().from(narrativeAnalysis).where(eq(narrativeAnalysis.videoId, analysis.videoId));
+    if (existing.length > 0) {
+      const [updated] = await db.update(narrativeAnalysis).set(analysis).where(eq(narrativeAnalysis.videoId, analysis.videoId)).returning();
+      return updated;
+    }
+    const [inserted] = await db.insert(narrativeAnalysis).values(analysis).returning();
+    return inserted;
+  }
+
+  async getNarrativeAnalysis(videoId: string): Promise<any> {
+    const [res] = await db.select().from(narrativeAnalysis).where(eq(narrativeAnalysis.videoId, videoId));
+    return res;
+  }
+
+  async upsertAudienceCuriositySignal(signal: any): Promise<any> {
+    const [inserted] = await db.insert(audienceCuriositySignals).values(signal).returning();
+    return inserted;
+  }
+
+  async getAudienceCuriositySignals(channelId: string): Promise<any[]> {
+    return await db.select().from(audienceCuriositySignals).where(eq(audienceCuriositySignals.channelId, channelId)).orderBy(desc(audienceCuriositySignals.lastDetected));
+  }
+
+  async upsertBurnoutSignal(signal: any): Promise<any> {
+    const existing = await db.select().from(burnoutSignals).where(eq(burnoutSignals.channelId, signal.channelId));
+    if (existing.length > 0) {
+      const [updated] = await db.update(burnoutSignals).set(signal).where(eq(burnoutSignals.channelId, signal.channelId)).returning();
+      return updated;
+    }
+    const [inserted] = await db.insert(burnoutSignals).values(signal).returning();
+    return inserted;
+  }
+
+  async getBurnoutSignal(channelId: string): Promise<any> {
+    const [res] = await db.select().from(burnoutSignals).where(eq(burnoutSignals.channelId, channelId));
+    return res;
+  }
+
+  async upsertLongevityPrediction(prediction: any): Promise<any> {
+    const existing = await db.select().from(longevityPredictions).where(eq(longevityPredictions.videoId, prediction.videoId));
+    if (existing.length > 0) {
+      const [updated] = await db.update(longevityPredictions).set(prediction).where(eq(longevityPredictions.videoId, prediction.videoId)).returning();
+      return updated;
+    }
+    const [inserted] = await db.insert(longevityPredictions).values(prediction).returning();
+    return inserted;
+  }
+
+  async getLongevityPrediction(videoId: string): Promise<any> {
+    const [res] = await db.select().from(longevityPredictions).where(eq(longevityPredictions.videoId, videoId));
+    return res;
+  }
+
+  async upsertEcosystemHealthScore(score: any): Promise<any> {
+    const existing = await db.select().from(ecosystemHealthScores).where(eq(ecosystemHealthScores.channelId, score.channelId));
+    if (existing.length > 0) {
+      const [updated] = await db.update(ecosystemHealthScores).set(score).where(eq(ecosystemHealthScores.channelId, score.channelId)).returning();
+      return updated;
+    }
+    const [inserted] = await db.insert(ecosystemHealthScores).values(score).returning();
+    return inserted;
+  }
+
+  async getEcosystemHealthScore(channelId: string): Promise<any> {
+    const [res] = await db.select().from(ecosystemHealthScores).where(eq(ecosystemHealthScores.channelId, channelId));
+    return res;
   }
 }
 

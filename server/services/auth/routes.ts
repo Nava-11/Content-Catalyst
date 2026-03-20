@@ -30,7 +30,9 @@ router.get("/me", async (req, res) => {
             picture: user.profilePic
         },
         isProfileComplete: !!profile,
-        channelId: profile?.channelId
+        channelId: profile?.channelId,
+        channelTitle: profile?.channelTitle,
+        subscriberCount: profile?.subscriberCount
     });
 });
 
@@ -118,7 +120,7 @@ router.post("/google", async (req, res) => {
 
         const token = await createSession(user.id);
         res.cookie("auth_token", token, { httpOnly: true, secure: false, sameSite: "lax" });
-        res.json({ token, isProfileComplete, user, channelId: profile?.channelId });
+        res.json({ token, isProfileComplete, user, channelId: profile?.channelId, channelTitle: profile?.channelTitle, subscriberCount: profile?.subscriberCount });
 
     } catch (e: any) {
         console.error("Google Auth Error:", e);

@@ -8,7 +8,12 @@ export enum Topics {
     IDEA_GENERATED = "idea.generated",
     IDEA_CLICKED = "idea.clicked",
     IDEA_SAVED = "idea.saved",
-    REWARD_LOGGED = "reward.logged"
+    IDEA_PLANNED = "idea.planned",
+    IDEA_PUBLISHED = "idea.published",
+    REWARD_LOGGED = "reward.logged",
+    CREATIVE_MEMORY_UPDATED = "creative.memory.updated",
+    CREATIVE_FATIGUE_DETECTED = "creative.fatigue.detected",
+    MEDIA_ANALYZED = "media.analyzed"
 }
 
 export interface KafkaMessage<T = any> {

@@ -275,105 +275,144 @@ router.get("/recommendations/:channelId", async (req, res) => {
 
 
 
-    if ((ideasLib as any).attachConceptProfilesToClusters) {
-        clusterList = (ideasLib as any).attachConceptProfilesToClusters(clusterList) as any[];
-    }
+        if ((ideasLib as any).attachConceptProfilesToClusters) {
+            clusterList = (ideasLib as any).attachConceptProfilesToClusters(clusterList) as any[];
+        }
 
-    // Main Idea Gen
-    const analysis = await ideasLib.analyzeChannel(videos, metrics, clusterList, channelAnalytics);
-    const { diagnosis, topicContext, expressionProfile } = analysis as any;
-    const strategy = ideasLib.strategyFromDiagnosis(diagnosis);
-    const experimentsDef = ideasLib.experimentsFromStrategy(strategy, clusterList);
+        // Main Idea Gen
+        const analysis = await ideasLib.analyzeChannel(videos, metrics, clusterList, channelAnalytics);
+        const { diagnosis, topicContext, expressionProfile } = analysis as any;
+        const strategy = ideasLib.strategyFromDiagnosis(diagnosis);
+        const experimentsDef = ideasLib.experimentsFromStrategy(strategy, clusterList);
 
-    // Adjacent clusters
-    const sims = clusterList.map((c: any) => ({ idx: c.idx, sim: hf.cosine(clusterList[0].centroid || [], c.centroid || []) }));
-    sims.sort((a: any, b: any) => b.sim - a.sim);
-    const adjacentIdxs = sims.filter((s: any) => s.idx !== clusterList[0].idx).slice(0, 3).map((s: any) => s.idx);
-    const adjacentClusters = adjacentIdxs.map((i: any) => clusterList.find((c: any) => c.idx === i)).filter(Boolean);
+        // Adjacent clusters
+        const sims = clusterList.map((c: any) => ({ idx: c.idx, sim: hf.cosine(clusterList[0].centroid || [], c.centroid || []) }));
+        sims.sort((a: any, b: any) => b.sim - a.sim);
+        const adjacentIdxs = sims.filter((s: any) => s.idx !== clusterList[0].idx).slice(0, 3).map((s: any) => s.idx);
+        const adjacentClusters = adjacentIdxs.map((i: any) => clusterList.find((c: any) => c.idx === i)).filter(Boolean);
 
-    const experiments: any[] = [];
-    for (const expDef of experimentsDef) {
-        const ideas = await ideasLib.ideasFromExperiment(
-            expDef,
-            clusterList[0],
-            adjacentClusters,
-            channelId,
-            channelAnalytics,
-            metrics,
-            clusterList,
-            topicContext,
-            expressionProfile,
-            3
-        );
+        const experiments: any[] = [];
+        for (const expDef of experimentsDef) {
+            const ideas = await ideasLib.ideasFromExperiment(
+                expDef,
+                clusterList[0],
+                adjacentClusters,
+                channelId,
+                channelAnalytics,
+                metrics,
+                clusterList,
+                topicContext,
+                expressionProfile,
+                3
+            );
 
-        // RANKING INTEGRATION: Score ideas based on RL State
-        // Retrieve User Context if available (passed from request or default)
-        // Ideally we'd pass userId to this function but catching it from context is hard in this loop.
-        // Let's fetch it once at top if we had req. For now, use "moderate" default or fetch if we can.
-        // Actually, for this MVP, let's just use the RL State raw stats here, 
-        // BUT we want the multiplier.
-        // Let's duplicate the simple multiplier logic here to keep services decoupled but functional.
+            // RANKING INTEGRATION: Score ideas based on RL State
+            // Retrieve User Context if available (passed from request or default)
+            // Ideally we'd pass userId to this function but catching it from context is hard in this loop.
+            // Let's fetch it once at top if we had req. For now, use "moderate" default or fetch if we can.
+            // Actually, for this MVP, let's just use the RL State raw stats here, 
+            // BUT we want the multiplier.
+            // Let's duplicate the simple multiplier logic here to keep services decoupled but functional.
 
-        // Note: In real app, we'd call the Ranking Service via gRPC/HTTP.
-        // Here we import RLState directly.
+            // Note: In real app, we'd call the Ranking Service via gRPC/HTTP.
+            // Here we import RLState directly.
 
-        const rankedIdeas = await Promise.all(ideas.map(async (idea: any) => {
-            const stats = await RLState.getArmStats(idea.format || "general");
+            const rankedIdeas = await Promise.all(ideas.map(async (idea: any) => {
+                const stats = await RLState.getArmStats(idea.format || "general");
 
-            // Thompson Sampling (Mean)
-            const mean = stats.alpha / (stats.alpha + stats.beta);
+                // Thompson Sampling (Mean)
+                const mean = stats.alpha / (stats.alpha + stats.beta);
 
-            // Risk Multiplier (Simplified logic for Idea Service display)
-            // We don't have user ID in this scope easily without refactoring the whole controller signature.
-            // So we'll show the "Global" score here (Thompson Mean).
-            // The *Personalized* score happens if we call the /rank endpoint explicitly.
-            // BUT, to satisfy the requirement "Visible idea ranking... Users cannot understand why",
-            // we should try to show the personalized score if possible.
-            // The frontend calls `handleIdeaClick` which hits `GET /idea/:id`.
-            // The dashboard `GET /recommendations/:channelId` is generic channel-level.
-            // Wait, `GET /recommendations` doesn't take User ID? 
-            // We should update `GET /recommendations` to take User ID (via auth header).
+                // Risk Multiplier (Simplified logic for Idea Service display)
+                // We don't have user ID in this scope easily without refactoring the whole controller signature.
+                // So we'll show the "Global" score here (Thompson Mean).
+                // The *Personalized* score happens if we call the /rank endpoint explicitly.
+                // BUT, to satisfy the requirement "Visible idea ranking... Users cannot understand why",
+                // we should try to show the personalized score if possible.
+                // The frontend calls `handleIdeaClick` which hits `GET /idea/:id`.
+                // The dashboard `GET /recommendations/:channelId` is generic channel-level.
+                // Wait, `GET /recommendations` doesn't take User ID? 
+                // We should update `GET /recommendations` to take User ID (via auth header).
 
-            const score = mean * 100;
-            return { ...idea, score: Math.round(score) };
+                const score = mean * 100;
+                return { ...idea, score: Math.round(score) };
+            }));
+
+            // Sort by score descending
+            rankedIdeas.sort((a, b) => b.score - a.score);
+
+            experiments.push({
+                experimentType: expDef.experimentType,
+                description: expDef.description,
+                ideas: rankedIdeas,
+            });
+        }
+
+        const topicClusters = clusterList.map((c: any) => ({
+            index: c.idx,
+            label: c.topicLabel || "Cluster",
+            avgCrps: c.avgCrps || 0,
+            size: (c.videos || []).length,
+            performanceSummary: c.performanceSummary
         }));
 
-        // Sort by score descending
-        rankedIdeas.sort((a, b) => b.score - a.score);
+        res.json({ diagnosis, strategy, experiments, topicClusters });
 
-        experiments.push({
-            experimentType: expDef.experimentType,
-            description: expDef.description,
-            ideas: rankedIdeas,
-        });
+    } catch (e: any) {
+        console.error("Recommendations error:", e);
+        res.status(500).json({ message: "Failed to generate recommendations" });
     }
-
-    const topicClusters = clusterList.map((c: any) => ({
-        index: c.idx,
-        label: c.topicLabel || "Cluster",
-        avgCrps: c.avgCrps || 0,
-        size: (c.videos || []).length,
-        performanceSummary: c.performanceSummary
-    }));
-
-    res.json({ diagnosis, strategy, experiments, topicClusters });
-
-} catch (e: any) {
-    console.error("Recommendations error:", e);
-    res.status(500).json({ message: "Failed to generate recommendations" });
-}
 });
 
-// GET /idea/:id
-router.get("/idea/:id", async (req, res) => {
+// PUT /idea/:id/status
+router.put("/idea/:id/status", async (req, res) => {
     try {
         const id = parseInt(req.params.id, 10);
-        const blueprint = await ideasLib.expandIdeaBlueprint(id);
-        if (!blueprint) return res.status(404).json({ message: "Idea not found" });
-        res.json({ ideaBlueprint: blueprint });
+        const { status } = req.body;
+        const updated = await storage.updateIdeaStatus(id, status);
+        res.json({ success: true, idea: updated });
     } catch (e: any) {
-        console.error(e);
-        res.status(500).json({ message: "Failed to build idea blueprint" });
+        res.status(500).json({ message: "Failed to update status" });
+    }
+});
+
+// POST /ideas/save
+router.post("/ideas/save", async (req, res) => {
+    try {
+        const ideaData = req.body;
+        if (!ideaData.channelId || !ideaData.title) {
+            return res.status(400).json({ message: "Missing required fields" });
+        }
+        
+        const idea = await storage.upsertIdea({
+            ...ideaData,
+            status: ideaData.status || 'saved',
+            createdAt: new Date()
+        });
+        
+        res.json({ success: true, idea });
+    } catch (e: any) {
+        console.error("Save idea error:", e);
+        res.status(500).json({ message: "Failed to save idea" });
+    }
+});
+
+// GET /saved/:channelId
+router.get("/saved/:channelId", async (req, res) => {
+    try {
+        const ideas = await storage.getIdeas(req.params.channelId);
+        const savedIdeas = ideas.filter(i => i.status === 'saved' || i.status === 'published');
+
+        // Dynamic Predictions based on the Idea Score
+        const predictions = savedIdeas.map(idea => ({
+            ...idea,
+            predictedViews: Math.floor(((idea as any).score || 50) * 850),
+            predictedGrowth: (((idea as any).score || 50) / 100 * 15).toFixed(1) + "%"
+        }));
+
+        res.json({ ideas: predictions });
+    } catch (e: any) {
+        res.status(500).json({ message: "Failed to fetch saved ideas" });
     }
 });
 
