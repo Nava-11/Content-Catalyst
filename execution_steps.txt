@@ -1,0 +1,83 @@
+CONTENT-CATALYST: EXECUTION & SETUP GUIDE
+==========================================
+
+This document outlines the exact steps to install, configure, and execute the Content-Catalyst project, including the newly added Unit Testing suite.
+
+1. PREREQUISITES
+----------------
+- Node.js (v18+ recommended)
+- npm or yarn
+- PostgreSQL (for storage)
+- Redis (for caching)
+
+2. INSTALLATION
+---------------
+Run the following commands in the project root:
+
+$ npm install
+$ npm install -D vitest @vitejs/plugin-react jsdom @testing-library/react @testing-library/jest-dom supertest @types/supertest
+
+3. SYSTEM ARCHITECTURE
+----------------------
+- client/  : React (Vite) Frontend
+- server/  : Express & Drizzle ORM Backend
+- shared/  : TypeScript Schemas & Utilities
+- server/services/ : Modular microservices (Analytics, Ideas, Ranking, Features)
+
+4. UNIT TESTING SETUP
+---------------------
+The project uses Vitest. Configuration files:
+- /vitest.config.ts : Root configuration for test discovery.
+- /client/src/test/setup.ts : React Testing Library setup.
+
+5. EXECUTION COMMANDS
+---------------------
+- To run the development server:
+  $ npm run dev
+
+- To run ALL unit tests (once):
+  $ npm run test:run
+
+- To run tests in UI mode:
+  $ npm run test:ui
+
+- To generate coverage reports:
+  $ npm run test:coverage
+
+6. KEY LOGIC & TEST FILES
+-------------------------
+A. CRPS Calculation
+   - Logic: /server/services/features/analysis.ts
+   - Test:  /server/services/features/analysis.test.ts
+
+B. K-Means Clustering
+   - Logic: /server/services/ideas/clustering.ts
+   - Test:  /server/services/ideas/clustering.test.ts
+
+C. Idea Ranking (Bandit Logic)
+   - Logic: /server/services/ranking/logic.ts (Extracted for testability)
+   - Test:  /server/services/ranking/logic.test.ts
+   - Routes: /server/services/ranking/routes.ts
+
+D. API Endpoints (Analytics)
+   - Routes: /server/services/analytics/routes.ts
+   - Test:   /server/services/analytics/routes.test.ts
+
+E. UI Components
+   - Component: /client/src/components/NarrativeVisualizer.tsx
+   - Test:      /client/src/components/NarrativeVisualizer.test.tsx
+
+7. VALIDATION METRIC FORMULAS
+-----------------------------
+- CRPS = (0.5 * Views) + (0.3 * Likes) + (0.2 * Comments) [Relative to Average]
+- Health Score = 25% Diversity + 25% Stability + 25% Innovation + 25% Curiosity
+- Ranking = Thompson Sampling Beta(alpha, beta) * RiskMultiplier
+
+8. CONTACT & SUPPORT
+--------------------
+For further technical deep dives, refer to:
+- /brain/<id>/walkthrough.md
+- /brain/<id>/validation_metrics.md
+- /brain/<id>/results_analysis_discussion.md
+==========================================
+END OF GUIDE

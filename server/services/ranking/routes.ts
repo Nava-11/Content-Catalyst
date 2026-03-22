@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { kafka, Topics } from "../infrastructure/kafka";
 import { RLState } from "./state";
+import { sampleBeta, getRiskMultiplier } from "./logic";
 
 const router = Router();
 
@@ -8,41 +9,6 @@ import { db } from "../../storage";
 import { ideas, userPreferences } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
-// Bandit Helper: Beta distribution sample (Thompson Sampling)
-function sampleBeta(alpha: number, beta: number): number {
-    // Box-Muller transform for normal approx if needed, 
-    // but for simple ranking: Mean + Variance-based exploration
-    const mean = alpha / (alpha + beta);
-    // Add exploration noise (decaying with more data)
-    const variance = (alpha * beta) / (Math.pow(alpha + beta, 2) * (alpha + beta + 1));
-    const noise = (Math.random() - 0.5) * Math.sqrt(variance);
-    return mean + noise;
-}
-
-// Risk Penalty Multiplier
-// Conservative: hates High Risk (0.5x), loves Low Risk (1.2x)
-// Aggressive: loves High Risk (1.2x)
-function getRiskMultiplier(riskProfile: string | null, format: string): number {
-    if (!riskProfile || riskProfile === "moderate") return 1.0;
-
-    const riskyFormats = ["challenge", "rant", "experiment"];
-    const safeFormats = ["tutorial", "listicle", "review"];
-
-    const isRisky = riskyFormats.includes(format.toLowerCase());
-    const isSafe = safeFormats.includes(format.toLowerCase());
-
-    if (riskProfile === "conservative") {
-        if (isRisky) return 0.6; // Heavy penalty
-        if (isSafe) return 1.2;  // Boost
-    }
-
-    if (riskProfile === "aggressive") {
-        if (isRisky) return 1.3; // Boost
-        if (isSafe) return 0.9;  // Slight boredom penalty
-    }
-
-    return 1.0;
-}
 
 export function initRankingService() {
     // Listen for Rewards
