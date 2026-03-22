@@ -179,11 +179,7 @@ The project includes a comprehensive suite of **33 unit tests** covering mathema
   npm run test:ui
   ```
 
-## 📊 Core Metrics
 
-- **CRPS (Creator-Relative Performance Score)**: A weighted metric $(0.5V + 0.3L + 0.2C)$ that compares video performance against your own channel's historical data.
-- **Retention Risk**: A structural assessment of video narratives (Hook → Problem → Solution).
-- **Ecosystem Health**: A 100-point score evaluating your content strategy's sustainability.
 
 ## 📂 Project Structure
 
