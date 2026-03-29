@@ -18,6 +18,7 @@ import { simulatorService } from "./simulator";
 import { narrativeGraphService } from "./narrative_graph";
 import { feedbackLoopService } from "./feedback_loop";
 import { coCreatorAgent } from "../agent/co_creator";
+import { ThumbnailService } from "./thumbnail";
 
 const router = Router();
 
@@ -298,6 +299,45 @@ router.post("/feedback/idea/:ideaId", async (req, res) => {
         res.json(result);
     } catch (e: any) {
         res.status(500).json({ error: "Failed to record feedback" });
+    }
+});
+
+router.post("/thumbnail/generate", async (req, res) => {
+    try {
+        const { idea, style } = req.body;
+        if (!idea) return res.status(400).json({ error: "Idea is required" });
+        
+        const thumbnailService = ThumbnailService.getInstance();
+        const result = await thumbnailService.generateThumbnail(
+            idea, 
+            style || 'Clickbait'
+        );
+        
+        res.json(result);
+    } catch (error: any) {
+        console.error("[Features] Thumbnail Generation Error:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+router.post("/thumbnail/edit", async (req, res) => {
+    try {
+        const { image, instruction, history } = req.body;
+        if (!image || !instruction) {
+            return res.status(400).json({ error: "Image and Instruction are required" });
+        }
+        
+        const thumbnailService = ThumbnailService.getInstance();
+        const result = await thumbnailService.editThumbnail(
+            image, 
+            instruction, 
+            history || []
+        );
+        
+        res.json(result);
+    } catch (error: any) {
+        console.error("[Features] Thumbnail Editing Error:", error);
+        res.status(500).json({ error: error.message });
     }
 });
 

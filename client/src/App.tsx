@@ -14,7 +14,7 @@ import WorldModel from "@/pages/Dashboard/WorldModel";
 import IdeasEngine from "@/pages/Dashboard/IdeasEngine";
 import CreativeHealth from "@/pages/Dashboard/CreativeHealth";
 import WhatIfSimulator from "@/pages/Dashboard/WhatIfSimulator";
-import MoodBoard from "@/pages/Dashboard/MoodBoard";
+import ThumbnailGenerator from "@/pages/Dashboard/ThumbnailGenerator";
 import Roadmap from "@/pages/Dashboard/Roadmap";
 import RagChat from "@/pages/Dashboard/RagChat";
 import Settings from "@/pages/Dashboard/Settings";
@@ -33,7 +33,7 @@ function Router() {
       <Route path="/dashboard/ideas" component={IdeasEngine} />
       <Route path="/dashboard/health" component={CreativeHealth} />
       <Route path="/dashboard/simulator" component={WhatIfSimulator} />
-      <Route path="/dashboard/mood-board" component={MoodBoard} />
+      <Route path="/dashboard/thumbnail-generator" component={ThumbnailGenerator} />
       <Route path="/dashboard/roadmap" component={Roadmap} />
       <Route path="/dashboard/chat" component={RagChat} />
       <Route path="/dashboard/settings" component={Settings} />

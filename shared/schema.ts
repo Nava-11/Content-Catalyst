@@ -165,7 +165,8 @@ export const users = pgTable("users", {
 export const creatorProfiles = pgTable("creator_profiles", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id),
-  channelId: text("channel_id").notNull(),
+  channelId: text("channel_id").notNull().unique(),
+
   channelTitle: text("channel_title"),
   subscriberCount: integer("subscriber_count"),
   createdAt: timestamp("created_at").defaultNow(),

@@ -1,0 +1,19 @@
+{
+  "model": "qwen-image-2.0-pro",
+  "input": {
+    "messages": [
+      {
+        "role": "user",
+        "content": [
+          {
+            "text": "A beautiful sunset over a futuristic city"
+          }
+        ]
+      }
+    ]
+  },
+  "parameters": {
+    "size": "1024*1024",
+    "n": 1
+  }
+}

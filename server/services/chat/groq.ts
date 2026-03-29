@@ -31,7 +31,7 @@ export async function chatWithContext(
         const completion = await groq.chat.completions.create({
             messages,
             model: MODEL,
-            temperature: 0.7,
+            temperature: 0.78, // High creativity for variety and natural flow
             max_tokens: 1024,
         });
 

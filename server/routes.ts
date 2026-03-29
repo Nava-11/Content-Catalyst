@@ -45,10 +45,10 @@ export async function registerRoutes(
   app.use("/services/analytics", analyticsRouter);
   app.use("/services/features", featuresRouter);
   app.use("/services/ideas", ideasRouter);
-  app.use("/services/chat", chatRouter);
-  app.use("/services/prediction", predictionRouter);
-  app.use("/services/ranking", rankingRouter);
-  app.use("/services/workflow", workflowRouter);
+  app.use("/api/chat", chatRouter);
+  app.use("/api/prediction", predictionRouter);
+  app.use("/api/ranking", rankingRouter);
+  app.use("/api/workflow", workflowRouter);
   app.use("/auth", authRouter);
   app.use("/api/user", userRouter);
   app.use("/api/onboarding", onboardingRouter);
@@ -137,10 +137,6 @@ export async function registerRoutes(
       res.json(idea);
   });
 
-  app.post(api.chat.path, async (req, res, next) => {
-    req.url = "/message";
-    chatRouter(req, res, next);
-  });
 
   return httpServer;
 }

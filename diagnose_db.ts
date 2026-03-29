@@ -1,23 +1,21 @@
 import { db } from "./server/db";
-import { users, creatorProfiles, videos, channelAnalytics } from "./shared/schema";
+import { users, creatorProfiles, videos, channelAnalytics, clusters, creatorStyleProfiles, narrativeAnalysis } from "./shared/schema";
 
 async function diagnose() {
     try {
-        console.log("--- Database Diagnosis ---");
+        console.log("--- Comprehensive Database Diagnosis ---");
 
-        const allUsers = await db.select().from(users);
-        console.log("Users:", allUsers.length);
-        console.log(JSON.stringify(allUsers, null, 2));
+        const allClusters = await db.select().from(clusters);
+        console.log("Clusters:", allClusters.length);
+        console.log(JSON.stringify(allClusters, null, 2));
 
-        const profiles = await db.select().from(creatorProfiles);
-        console.log("Creator Profiles:", profiles.length);
-        console.log(JSON.stringify(profiles, null, 2));
+        const styleProfiles = await db.select().from(creatorStyleProfiles);
+        console.log("Style Profiles:", styleProfiles.length);
+        console.log(JSON.stringify(styleProfiles, null, 2));
 
-        const videoCount = await db.select().from(videos);
-        console.log("Videos:", videoCount.length);
-
-        const analytics = await db.select().from(channelAnalytics);
-        console.log("Channel Analytics:", analytics.length);
+        const narrative = await db.select().from(narrativeAnalysis);
+        console.log("Narrative Analysis:", narrative.length);
+        console.log(JSON.stringify(narrative, null, 2).slice(0, 1000)); // Truncate if too long
 
         console.log("--- End Diagnosis ---");
     } catch (err) {
